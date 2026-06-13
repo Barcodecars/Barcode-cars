@@ -144,14 +144,25 @@ const FILE_PATH = 'cars.json';
 function loadConfig(){
   try{
     const s = JSON.parse(localStorage.getItem('bc_cfg')||'{}');
-    if(s.owner){ CFG=s;
+    if(s.owner){
+      if(s.token) s.token = String(s.token).replace(/[^A-Za-z0-9_]/g,'');
+      CFG=s;
       cfgOwner.value=s.owner; cfgRepo.value=s.repo; cfgToken.value=s.token;
     }
   }catch(e){}
 }
 function saveConfig(){
-  CFG = { owner:cfgOwner.value.trim(), repo:cfgRepo.value.trim(), token:cfgToken.value.trim() };
+  // إزالة أي مسافات أو أحرف غير مرئية من المفتاح، والإبقاء على الأحرف الصالحة فقط
+  let rawToken = cfgToken.value;
+  let cleanToken = rawToken.replace(/[^A-Za-z0-9_]/g,'');
+  CFG = { owner:cfgOwner.value.trim(), repo:cfgRepo.value.trim(), token:cleanToken };
   if(!CFG.owner||!CFG.repo||!CFG.token){ setCfg('err','يرجى تعبئة كل الحقول'); return; }
+  // تحقق أن المفتاح يبدو صحيحاً
+  if(!/^(ghp_|github_pat_)/.test(CFG.token)){
+    setCfg('err','المفتاح لا يبدو صحيحاً. يجب أن يبدأ بـ ghp_ أو github_pat_ ويُنسخ كاملاً من GitHub بدون أي نص عربي أو مسافات.');
+    return;
+  }
+  cfgToken.value = CFG.token; // عرض النسخة المنظّفة
   localStorage.setItem('bc_cfg', JSON.stringify(CFG));
   setCfg('load','جارٍ الاتصال…');
   viewSite.href = 'https://'+CFG.owner.toLowerCase()+'.github.io/'+CFG.repo+'/';
