@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم — Barcode Cars</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#0d0d0d;--black2:#1a1a1a;--black3:#2b2b2b;
+  --yellow:#f5a800;--yellow2:#ffc533;
+  --white:#fff;--white2:#f0f0f0;--gray:#8a8a8a;--gray2:#3a3a3a;--rule:#2e2e2e;
+  --red:#e2453a;--green:#2faa55;
+}
+body{font-family:'Tajawal',sans-serif;background:var(--black);color:var(--white);min-height:100vh;padding-bottom:40px}
+header{
+  background:var(--black2);border-bottom:3px solid var(--yellow);
+  padding:0 20px;height:70px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+}
+header .brand{font-size:20px;font-weight:900;color:var(--yellow);letter-spacing:1px}
+header .brand small{display:block;font-size:11px;color:var(--gray);letter-spacing:2px;font-weight:700}
+header a.view-link{color:var(--white2);text-decoration:none;font-size:13px;font-weight:700;border:1px solid var(--gray2);padding:8px 14px;border-radius:6px}
+.wrap{max-width:760px;margin:0 auto;padding:20px}
+
+/* بطاقة الإعداد */
+.setup{background:var(--black2);border:1px solid var(--rule);border-radius:12px;padding:20px;margin-bottom:24px}
+.setup h2{font-size:16px;color:var(--yellow);margin-bottom:6px}
+.setup p{font-size:13px;color:var(--gray);margin-bottom:14px;line-height:1.7}
+.setup input{width:100%;background:var(--black);border:1px solid var(--gray2);color:var(--white);
+  padding:12px 14px;border-radius:8px;font-family:inherit;font-size:14px;margin-bottom:10px}
+.setup .row-btns{display:flex;gap:10px;flex-wrap:wrap}
+.status{font-size:13px;font-weight:700;padding:10px 14px;border-radius:8px;margin-top:10px;display:none}
+.status.ok{background:rgba(47,170,85,.15);color:#6ee89a;border:1px solid var(--green);display:block}
+.status.err{background:rgba(226,69,58,.15);color:#ff9089;border:1px solid var(--red);display:block}
+.status.load{background:rgba(245,168,0,.12);color:var(--yellow2);border:1px solid var(--yellow);display:block}
+
+/* الأزرار */
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;font-weight:800;font-size:14px;padding:12px 18px;transition:.15s}
+.btn-primary{background:var(--yellow);color:var(--black)}
+.btn-primary:hover{background:var(--yellow2)}
+.btn-ghost{background:transparent;color:var(--white2);border:1px solid var(--gray2)}
+.btn-danger{background:var(--red);color:#fff;padding:8px 14px;font-size:13px}
+button:disabled{opacity:.5;cursor:not-allowed}
+
+/* النموذج */
+.card{background:var(--black2);border:1px solid var(--rule);border-radius:12px;padding:20px;margin-bottom:24px}
+.card h2{font-size:17px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 .dot{width:8px;height:8px;background:var(--yellow);border-radius:50%}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;color:var(--gray);font-weight:700}
+.field input{background:var(--black);border:1px solid var(--gray2);color:var(--white);
+  padding:11px 13px;border-radius:8px;font-family:inherit;font-size:14px}
+.field input:focus{outline:none;border-color:var(--yellow)}
+.form-actions{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
+
+/* القائمة */
+.list-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.list-head h2{font-size:17px}
+.list-head .count{background:var(--yellow);color:var(--black);font-weight:900;font-size:12px;padding:4px 12px;border-radius:20px}
+.car-row{background:var(--black2);border:1px solid var(--rule);border-radius:10px;padding:14px;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px}
+.car-row .info{flex:1;min-width:0}
+.car-row .info .name{font-weight:800;font-size:15px;margin-bottom:3px}
+.car-row .info .meta{font-size:12px;color:var(--gray)}
+.car-row .info .price{color:var(--yellow2);font-weight:800;font-size:13px;margin-top:3px}
+.empty{text-align:center;color:var(--gray);padding:30px;font-size:14px}
+.hint{font-size:12px;color:var(--gray);line-height:1.7;margin-top:8px}
+.hint a{color:var(--yellow2)}
+.lock-note{background:rgba(245,168,0,.08);border:1px dashed var(--yellow);border-radius:8px;padding:12px;font-size:12px;color:var(--yellow2);line-height:1.7;margin-bottom:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">لوحة التحكم<small>BARCODE CARS ADMIN</small></div>
+  <a class="view-link" id="viewSite" href="index.html" target="_blank">عرض الموقع ↗</a>
+</header>
+
+<div class="wrap">
+
+  <!-- إعداد الاتصال -->
+  <div class="setup" id="setupCard">
+    <h2>الاتصال بـ GitHub</h2>
+    <p>أدخل بيانات مستودعك ومفتاح GitHub (Token) مرة واحدة. تُحفظ على هذا الجهاز فقط ولا تظهر لأحد.</p>
+    <input id="cfgOwner" placeholder="اسم المستخدم (مثال: Barcodecars)" autocomplete="off">
+    <input id="cfgRepo" placeholder="اسم المستودع (مثال: Barcode-cars)" autocomplete="off">
+    <input id="cfgToken" type="password" placeholder="GitHub Token (يبدأ بـ ghp_ أو github_pat_)" autocomplete="off">
+    <div class="row-btns">
+      <button class="btn-primary" onclick="saveConfig()">حفظ والاتصال</button>
+      <button class="btn-ghost" onclick="clearConfig()">مسح البيانات</button>
+    </div>
+    <div class="status" id="cfgStatus"></div>
+    <div class="hint">
+      كيف تنشئ Token؟ افتح
+      <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>
+      ← Generate new token (classic) ← فعّل صلاحية <b>repo</b> ← انسخ المفتاح والصقه هنا.
+    </div>
+  </div>
+
+  <div class="lock-note">
+    ⚠️ لا تشارك رابط هذه الصفحة ولا المفتاح مع أحد. أي شخص يملكه يستطيع تعديل سياراتك.
+  </div>
+
+  <!-- نموذج الإضافة -->
+  <div class="card">
+    <h2><span class="dot"></span><span id="formTitle">إضافة سيارة جديدة</span></h2>
+    <div class="grid">
+      <div class="field full"><label>اسم السيارة</label><input id="fName" placeholder="مثال: جيتور X70"></div>
+      <div class="field"><label>الموديل (السنة)</label><input id="fYear" inputmode="numeric" placeholder="مثال: 2026"></div>
+      <div class="field"><label>اللون</label><input id="fColor" placeholder="مثال: أبيض"></div>
+      <div class="field"><label>رقم اللوحة</label><input id="fPlate" placeholder="مثال: 11 Q 20643"></div>
+      <div class="field"><label>العداد (كم)</label><input id="fKm" inputmode="numeric" placeholder="مثال: 8400"></div>
+      <div class="field full"><label>السعر (بالأرقام فقط)</label><input id="fPrice" inputmode="numeric" placeholder="مثال: 23900000"></div>
+      <div class="field full"><label>الملاحظات</label><input id="fNotes" placeholder="اختياري"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="saveBtn" onclick="submitCar()" disabled>إضافة السيارة</button>
+      <button class="btn-ghost" id="cancelBtn" onclick="cancelEdit()" style="display:none">إلغاء التعديل</button>
+    </div>
+    <div class="status" id="formStatus"></div>
+  </div>
+
+  <!-- قائمة السيارات -->
+  <div class="list-head">
+    <h2>السيارات الحالية</h2>
+    <span class="count" id="carCount">0</span>
+  </div>
+  <div id="carList"><div class="empty">في انتظار الاتصال بـ GitHub…</div></div>
+
+</div>
+
+<script>
+// ─────────── الحالة ───────────
+let CFG = { owner:'', repo:'', token:'' };
+let CARS = [];
+let SHA = null;          // معرّف نسخة الملف الحالية على GitHub
+let editIndex = -1;      // -1 يعني إضافة، غير ذلك يعني تعديل
+const FILE_PATH = 'cars.json';
+
+// تخزين الإعداد محلياً على الجهاز
+function loadConfig(){
+  try{
+    const s = JSON.parse(localStorage.getItem('bc_cfg')||'{}');
+    if(s.owner){ CFG=s;
+      cfgOwner.value=s.owner; cfgRepo.value=s.repo; cfgToken.value=s.token;
+    }
+  }catch(e){}
+}
+function saveConfig(){
+  CFG = { owner:cfgOwner.value.trim(), repo:cfgRepo.value.trim(), token:cfgToken.value.trim() };
+  if(!CFG.owner||!CFG.repo||!CFG.token){ setCfg('err','يرجى تعبئة كل الحقول'); return; }
+  localStorage.setItem('bc_cfg', JSON.stringify(CFG));
+  setCfg('load','جارٍ الاتصال…');
+  viewSite.href = 'https://'+CFG.owner.toLowerCase()+'.github.io/'+CFG.repo+'/';
+  fetchCars();
+}
+function clearConfig(){
+  localStorage.removeItem('bc_cfg');
+  CFG={owner:'',repo:'',token:''};
+  cfgOwner.value=cfgRepo.value=cfgToken.value='';
+  setCfg('err','تم مسح البيانات من هذا الجهاز');
+}
+function setCfg(type,msg){ const e=document.getElementById('cfgStatus'); e.className='status '+type; e.textContent=msg; }
+function setForm(type,msg){ const e=document.getElementById('formStatus'); e.className='status '+type; e.textContent=msg; if(type==='ok') setTimeout(()=>{e.className='status';},2500); }
+
+// ─────────── قراءة الملف من GitHub ───────────
+async function fetchCars(){
+  try{
+    const url = `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${FILE_PATH}`;
+    const res = await fetch(url+'?t='+Date.now(), {
+      headers:{ 'Authorization':'Bearer '+CFG.token, 'Accept':'application/vnd.github+json' }
+    });
+    if(res.status===401){ setCfg('err','المفتاح غير صحيح أو منتهي. تحقق من Token.'); return; }
+    if(res.status===404){ setCfg('err','المستودع أو الملف غير موجود. تحقق من الاسم.'); return; }
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    SHA = data.sha;
+    const txt = decodeURIComponent(escape(atob(data.content)));
+    CARS = JSON.parse(txt);
+    setCfg('ok','✓ تم الاتصال بنجاح — عدد السيارات: '+CARS.length);
+    document.getElementById('saveBtn').disabled=false;
+    renderList();
+  }catch(e){
+    setCfg('err','تعذّر الاتصال: '+e.message);
+  }
+}
+
+// ─────────── كتابة الملف إلى GitHub ───────────
+async function pushCars(commitMsg){
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(CARS,null,2))));
+  const url = `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${FILE_PATH}`;
+  const res = await fetch(url, {
+    method:'PUT',
+    headers:{ 'Authorization':'Bearer '+CFG.token, 'Accept':'application/vnd.github+json' },
+    body: JSON.stringify({ message:commitMsg, content:content, sha:SHA })
+  });
+  if(!res.ok){ const t=await res.text(); throw new Error('HTTP '+res.status+' '+t); }
+  const data = await res.json();
+  SHA = data.content.sha; // تحديث المعرّف للنسخة الجديدة
+}
+
+// ─────────── إضافة / تعديل ───────────
+async function submitCar(){
+  const num = v => { const n=parseInt(String(v).replace(/[^\d]/g,''),10); return isNaN(n)?0:n; };
+  const car = {
+    name: fName.value.trim(),
+    year: num(fYear.value),
+    color: fColor.value.trim(),
+    plate: fPlate.value.trim(),
+    km: num(fKm.value),
+    price: num(fPrice.value),
+    notes: fNotes.value.trim()
+  };
+  if(!car.name){ setForm('err','اسم السيارة مطلوب'); return; }
+
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true; setForm('load','جارٍ الحفظ على GitHub…');
+  try{
+    if(editIndex>=0){ CARS[editIndex]=car; }
+    else { CARS.unshift(car); }
+    await pushCars(editIndex>=0 ? 'تعديل سيارة: '+car.name : 'إضافة سيارة: '+car.name);
+    setForm('ok', editIndex>=0 ? '✓ تم التعديل — سيظهر للزبون خلال دقيقة' : '✓ تمت الإضافة — ستظهر للزبون خلال دقيقة');
+    clearForm(); renderList();
+  }catch(e){
+    setForm('err','فشل الحفظ: '+e.message);
+    await fetchCars(); // إعادة المزامنة عند الخطأ
+  }
+  btn.disabled=false;
+}
+
+// ─────────── حذف ───────────
+async function deleteCar(i){
+  if(!confirm('هل تريد حذف: '+CARS[i].name+' ؟')) return;
+  const removed=CARS[i].name;
+  setForm('load','جارٍ الحذف…');
+  try{
+    CARS.splice(i,1);
+    await pushCars('حذف سيارة: '+removed);
+    setForm('ok','✓ تم الحذف — سيختفي عند الزبون خلال دقيقة');
+    renderList();
+  }catch(e){
+    setForm('err','فشل الحذف: '+e.message);
+    await fetchCars();
+  }
+}
+
+// ─────────── تعديل ───────────
+function startEdit(i){
+  editIndex=i; const c=CARS[i];
+  fName.value=c.name; fYear.value=c.year||''; fColor.value=c.color||'';
+  fPlate.value=c.plate||''; fKm.value=c.km||''; fPrice.value=c.price||''; fNotes.value=c.notes||'';
+  document.getElementById('formTitle').textContent='تعديل: '+c.name;
+  document.getElementById('saveBtn').textContent='حفظ التعديل';
+  document.getElementById('cancelBtn').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function cancelEdit(){ clearForm(); }
+function clearForm(){
+  editIndex=-1;
+  fName.value=fYear.value=fColor.value=fPlate.value=fKm.value=fPrice.value=fNotes.value='';
+  document.getElementById('formTitle').textContent='إضافة سيارة جديدة';
+  document.getElementById('saveBtn').textContent='إضافة السيارة';
+  document.getElementById('cancelBtn').style.display='none';
+}
+
+// ─────────── عرض القائمة ───────────
+function fmt(n){ return (n||0).toLocaleString('en-US'); }
+function renderList(){
+  document.getElementById('carCount').textContent=CARS.length;
+  const box=document.getElementById('carList');
+  if(!CARS.length){ box.innerHTML='<div class="empty">لا توجد سيارات بعد</div>'; return; }
+  box.innerHTML = CARS.map((c,i)=>`
+    <div class="car-row">
+      <div class="info">
+        <div class="name">${esc(c.name)}</div>
+        <div class="meta">${c.year||'—'} · ${esc(c.color||'—')} · ${esc(c.plate||'—')} · ${fmt(c.km)} كم</div>
+        <div class="price">${fmt(c.price)} د.ع</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-direction:column">
+        <button class="btn-ghost" style="padding:8px 12px;font-size:13px" onclick="startEdit(${i})">تعديل</button>
+        <button class="btn-danger" onclick="deleteCar(${i})">حذف</button>
+      </div>
+    </div>`).join('');
+}
+function esc(s){ return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+// ─────────── بدء ───────────
+loadConfig();
+if(CFG.owner && CFG.token){ viewSite.href='https://'+CFG.owner.toLowerCase()+'.github.io/'+CFG.repo+'/'; fetchCars(); }
+</script>
+</body>
+</html>
