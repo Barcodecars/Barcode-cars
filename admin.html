@@ -55,6 +55,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .field input{background:var(--black);border:1px solid var(--gray2);color:var(--white);
   padding:11px 13px;border-radius:8px;font-family:inherit;font-size:14px}
 .field input:focus{outline:none;border-color:var(--yellow)}
+.field textarea{background:var(--black);border:1px solid var(--gray2);color:var(--white);
+  padding:11px 13px;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;line-height:1.6}
+.field textarea:focus{outline:none;border-color:var(--yellow)}
 .form-actions{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
 
 /* القائمة */
@@ -115,6 +118,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
       <div class="field"><label>العداد (كم)</label><input id="fKm" inputmode="numeric" placeholder="مثال: 8400"></div>
       <div class="field full"><label>السعر (بالأرقام فقط)</label><input id="fPrice" inputmode="numeric" placeholder="مثال: 23900000"></div>
       <div class="field full"><label>الملاحظات</label><input id="fNotes" placeholder="اختياري"></div>
+      <div class="field full"><label>روابط الصور (رابط واحد في كل سطر)</label><textarea id="fImages" rows="4" placeholder="الصق رابط الصورة من imgbb هنا&#10;كل صورة في سطر منفصل&#10;مثال:&#10;https://i.ibb.co/xxxx/car1.jpg&#10;https://i.ibb.co/yyyy/car2.jpg"></textarea></div>
     </div>
     <div class="form-actions">
       <button class="btn-primary" id="saveBtn" onclick="submitCar()" disabled>إضافة السيارة</button>
@@ -216,6 +220,8 @@ async function pushCars(commitMsg){
 // ─────────── إضافة / تعديل ───────────
 async function submitCar(){
   const num = v => { const n=parseInt(String(v).replace(/[^\d]/g,''),10); return isNaN(n)?0:n; };
+  // تحويل نص روابط الصور إلى مصفوفة (سطر لكل رابط)
+  const images = fImages.value.split('\n').map(s=>s.trim()).filter(s=>s.length>3);
   const car = {
     name: fName.value.trim(),
     year: num(fYear.value),
@@ -223,7 +229,8 @@ async function submitCar(){
     plate: fPlate.value.trim(),
     km: num(fKm.value),
     price: num(fPrice.value),
-    notes: fNotes.value.trim()
+    notes: fNotes.value.trim(),
+    images: images
   };
   if(!car.name){ setForm('err','اسم السيارة مطلوب'); return; }
 
@@ -263,6 +270,8 @@ function startEdit(i){
   editIndex=i; const c=CARS[i];
   fName.value=c.name; fYear.value=c.year||''; fColor.value=c.color||'';
   fPlate.value=c.plate||''; fKm.value=c.km||''; fPrice.value=c.price||''; fNotes.value=c.notes||'';
+  const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
+  fImages.value=imgs.join('\n');
   document.getElementById('formTitle').textContent='تعديل: '+c.name;
   document.getElementById('saveBtn').textContent='حفظ التعديل';
   document.getElementById('cancelBtn').style.display='inline-block';
@@ -272,6 +281,7 @@ function cancelEdit(){ clearForm(); }
 function clearForm(){
   editIndex=-1;
   fName.value=fYear.value=fColor.value=fPlate.value=fKm.value=fPrice.value=fNotes.value='';
+  fImages.value='';
   document.getElementById('formTitle').textContent='إضافة سيارة جديدة';
   document.getElementById('saveBtn').textContent='إضافة السيارة';
   document.getElementById('cancelBtn').style.display='none';
@@ -283,10 +293,17 @@ function renderList(){
   document.getElementById('carCount').textContent=CARS.length;
   const box=document.getElementById('carList');
   if(!CARS.length){ box.innerHTML='<div class="empty">لا توجد سيارات بعد</div>'; return; }
-  box.innerHTML = CARS.map((c,i)=>`
+  box.innerHTML = CARS.map((c,i)=>{
+    const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
+    const thumb=imgs.length
+      ? `<img src="${esc(imgs[0])}" style="width:54px;height:42px;object-fit:cover;border-radius:6px;border:1px solid #2e2e2e;flex-shrink:0" alt="">`
+      : `<div style="width:54px;height:42px;border-radius:6px;border:1px dashed #3a3a3a;display:flex;align-items:center;justify-content:center;color:#555;font-size:18px;flex-shrink:0">🚗</div>`;
+    const imgBadge=imgs.length?`<span style="color:#f5a800;font-size:11px;font-weight:700"> · ${imgs.length} 📷</span>`:'';
+    return `
     <div class="car-row">
+      ${thumb}
       <div class="info">
-        <div class="name">${esc(c.name)}</div>
+        <div class="name">${esc(c.name)}${imgBadge}</div>
         <div class="meta">${c.year||'—'} · ${esc(c.color||'—')} · ${esc(c.plate||'—')} · ${fmt(c.km)} كم</div>
         <div class="price">${fmt(c.price)} د.ع</div>
       </div>
@@ -294,7 +311,8 @@ function renderList(){
         <button class="btn-ghost" style="padding:8px 12px;font-size:13px" onclick="startEdit(${i})">تعديل</button>
         <button class="btn-danger" onclick="deleteCar(${i})">حذف</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function esc(s){ return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 

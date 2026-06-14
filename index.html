@@ -258,6 +258,50 @@ td{padding:13px 16px;font-size:14px;color:#c8c8c8;white-space:nowrap;vertical-al
 @media(min-width:641px){
   .card-list{display:none!important}
 }
+/* ─── صور مصغّرة في الجدول ─── */
+.row-thumb{width:46px;height:34px;object-fit:cover;border-radius:6px;margin-left:8px;
+  vertical-align:middle;cursor:pointer;border:1px solid #2e2e2e;transition:.15s}
+.row-thumb:hover{transform:scale(1.05);border-color:#f5a800}
+.td-name{display:flex;align-items:center}
+
+/* ─── غلاف الصورة في بطاقة الهاتف ─── */
+.card-cover{position:relative;width:100%;height:190px;overflow:hidden;cursor:pointer;background:#1a1a1a}
+.card-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.card-cover-count{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.72);
+  color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px}
+
+/* ─── شريط الترقيم ─── */
+.pager{max-width:1200px;margin:18px auto 0;padding:0 16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.pager-info{color:#8a8a8a;font-size:13px;font-weight:700}
+.pager-btns{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.page-btn{background:#1a1a1a;border:1px solid #2e2e2e;color:#f0f0f0;font-family:inherit;
+  font-weight:700;font-size:14px;min-width:40px;height:40px;padding:0 12px;border-radius:8px;cursor:pointer;transition:.15s}
+.page-btn:hover:not(:disabled){border-color:#f5a800;color:#f5a800}
+.page-btn.active{background:#f5a800;color:#0d0d0d;border-color:#f5a800}
+.page-btn.nav{font-weight:800}
+.page-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ─── معرض الصور (Lightbox) ─── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;
+  display:none;align-items:center;justify-content:center;padding:20px}
+.lightbox.open{display:flex}
+.lb-inner{position:relative;max-width:1000px;width:100%;display:flex;flex-direction:column;align-items:center;gap:14px}
+.lb-img{max-width:100%;max-height:78vh;object-fit:contain;border-radius:10px;box-shadow:0 10px 50px rgba(0,0,0,.6)}
+.lb-close{position:fixed;top:16px;left:16px;background:#1a1a1a;border:1px solid #3a3a3a;color:#fff;
+  width:46px;height:46px;border-radius:50%;font-size:18px;cursor:pointer;z-index:10;font-weight:700}
+.lb-close:hover{background:#e2453a;border-color:#e2453a}
+.lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(26,26,26,.85);
+  border:1px solid #3a3a3a;color:#fff;width:52px;height:52px;border-radius:50%;font-size:30px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2}
+.lb-nav:hover{background:#f5a800;color:#0d0d0d;border-color:#f5a800}
+.lb-prev{right:6px}
+.lb-next{left:6px}
+.lb-caption{color:#f0f0f0;font-weight:800;font-size:16px;text-align:center}
+.lb-counter{color:#f5a800;font-weight:700;font-size:14px;margin-right:6px}
+@media(max-width:640px){
+  .lb-nav{width:44px;height:44px;font-size:24px}
+  .card-cover{height:210px}
+}
 </style>
 </head>
 <body>
@@ -338,7 +382,7 @@ td{padding:13px 16px;font-size:14px;color:#c8c8c8;white-space:nowrap;vertical-al
 <div class="card-list" id="cardList"></div>
 
 <!-- TABLE -->
-<div class="table-wrap">
+<div class="table-wrap" id="tableWrap">
   <table id="carsTable">
     <thead>
       <tr>
@@ -354,6 +398,20 @@ td{padding:13px 16px;font-size:14px;color:#c8c8c8;white-space:nowrap;vertical-al
     </thead>
     <tbody id="tbody"></tbody>
   </table>
+</div>
+
+<!-- PAGER -->
+<div class="pager" id="pager"></div>
+
+<!-- IMAGE GALLERY (LIGHTBOX) -->
+<div class="lightbox" id="lightbox" onclick="closeGalleryBg(event)">
+  <div class="lb-inner">
+    <button class="lb-close" onclick="closeGallery()">✕</button>
+    <button class="lb-nav lb-prev" onclick="galleryPrev(event)">‹</button>
+    <img class="lb-img" id="lbImg" src="" alt="">
+    <button class="lb-nav lb-next" onclick="galleryNext(event)">›</button>
+    <div class="lb-caption"><span id="lbName"></span> <span class="lb-counter" id="lbCounter"></span></div>
+  </div>
 </div>
 
 <script>
@@ -428,6 +486,10 @@ function fmtPrice(p){
 function fmtKm(k){return k?k.toLocaleString('ar-IQ')+' كم':'—'}
 function yrClass(y){return y>=2025?'yr-new':y>=2020?'yr-mid':'yr-old'}
 
+// ─── ترقيم الصفحات ───
+const PER_PAGE = 20;
+let currentPage = 1;
+
 function getFiltered(){
   const q=document.getElementById('q').value.trim().toLowerCase();
   const fy=document.getElementById('fYear').value;
@@ -482,18 +544,29 @@ function render(){
   if(!n){
     tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="icon">🔍</div><p>لا توجد سيارات تطابق بحثك</p></div></td></tr>`;
     cardList.innerHTML=`<div class="empty"><div class="icon">🔍</div><p>لا توجد سيارات تطابق بحثك</p></div>`;
+    document.getElementById('pager').innerHTML='';
     return;
   }
 
-  tbody.innerHTML=data.map((c,i)=>{
+  // حساب الصفحات
+  const totalPages = Math.ceil(n / PER_PAGE);
+  if(currentPage > totalPages) currentPage = totalPages;
+  if(currentPage < 1) currentPage = 1;
+  const start = (currentPage-1)*PER_PAGE;
+  const pageData = data.slice(start, start+PER_PAGE);
+
+  tbody.innerHTML=pageData.map((c,idx)=>{
+    const i=start+idx;
     const hex=CHEX[c.color]||'#555';
     const brd=CBORDER[c.color]||'';
     const pct=MAX_KM?Math.round(c.km/MAX_KM*100):0;
     const kmClr=pct>66?'#ef4444':pct>33?'#f5a800':'#22c55e';
     const notes=c.notes?`<span class="notes-tag">${c.notes}</span>`:`<span style="color:#3a3a3a">—</span>`;
+    const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
+    const thumb=imgs.length?`<img class="row-thumb" src="${esc(imgs[0])}" onclick="openGallery(${i})" loading="lazy" alt="">`:'';
     return`<tr>
       <td class="td-idx">${i+1}</td>
-      <td class="td-name">${c.name}</td>
+      <td class="td-name">${thumb}<span>${c.name}</span></td>
       <td><span class="yr ${yrClass(c.year)}">${c.year}</span></td>
       <td><div class="color-cell"><span class="cdot" style="background:${hex};${brd}"></span>${c.color}</div></td>
       <td><span class="plate">${c.plate}</span></td>
@@ -504,12 +577,19 @@ function render(){
   }).join('');
 
   // Mobile cards
-  cardList.innerHTML=data.map((c,i)=>{
+  cardList.innerHTML=pageData.map((c,idx)=>{
+    const i=start+idx;
     const hex=CHEX[c.color]||'#555';
     const brd=CBORDER[c.color]||'';
     const pct=MAX_KM?Math.round(c.km/MAX_KM*100):0;
     const kmClr=pct>66?'#ef4444':pct>33?'#f5a800':'#22c55e';
+    const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
+    const cover=imgs.length?`<div class="card-cover" onclick="openGallery(${i})">
+        <img src="${esc(imgs[0])}" loading="lazy" alt="">
+        ${imgs.length>1?`<span class="card-cover-count">${imgs.length} صور 📷</span>`:''}
+      </div>`:'';
     return`<div class="car-card">
+      ${cover}
       <div class="car-card-header">
         <span style="color:var(--gray);font-size:13px;font-weight:700;flex-shrink:0">${i+1}</span>
         <span class="card-name">${c.name}</span>
@@ -540,16 +620,79 @@ function render(){
       </div>
     </div>`;
   }).join('');
+
+  renderPager(totalPages, n);
 }
 
+// ─── شريط الترقيم ───
+function renderPager(totalPages, total){
+  const pager=document.getElementById('pager');
+  if(totalPages<=1){ pager.innerHTML=''; return; }
+  let btns='';
+  for(let p=1;p<=totalPages;p++){
+    btns+=`<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  const from=(currentPage-1)*PER_PAGE+1;
+  const to=Math.min(currentPage*PER_PAGE,total);
+  pager.innerHTML=`
+    <div class="pager-info">عرض ${from}–${to} من ${total} سيارة</div>
+    <div class="pager-btns">
+      <button class="page-btn nav" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹ السابق</button>
+      ${btns}
+      <button class="page-btn nav" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>التالي ›</button>
+    </div>`;
+}
+function goPage(p){
+  currentPage=p;
+  render();
+  const tw=document.getElementById('tableWrap');
+  window.scrollTo({top:tw?tw.offsetTop-20:0,behavior:'smooth'});
+}
+function esc(s){ return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
 ['q','fYear','fColor','fPrice','fSort'].forEach(id=>{
-  document.getElementById(id).addEventListener('input',render);
-  document.getElementById(id).addEventListener('change',render);
+  const reset=()=>{ currentPage=1; render(); };
+  document.getElementById(id).addEventListener('input',reset);
+  document.getElementById(id).addEventListener('change',reset);
 });
 document.getElementById('btnReset').addEventListener('click',()=>{
   ['q'].forEach(id=>document.getElementById(id).value='');
   ['fYear','fColor','fPrice','fSort'].forEach(id=>document.getElementById(id).value='');
-  render();
+  currentPage=1; render();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  معرض الصور (Lightbox)
+// ═══════════════════════════════════════════════════════════
+let galleryImgs=[], galleryIdx=0, galleryName='';
+function openGallery(carIndex){
+  const data=getFiltered();
+  const c=data[carIndex];
+  if(!c) return;
+  const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
+  if(!imgs.length) return;
+  galleryImgs=imgs; galleryIdx=0; galleryName=c.name;
+  showGalleryImg();
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function showGalleryImg(){
+  document.getElementById('lbImg').src=galleryImgs[galleryIdx];
+  document.getElementById('lbName').textContent=galleryName;
+  document.getElementById('lbCounter').textContent=galleryImgs.length>1?`(${galleryIdx+1}/${galleryImgs.length})`:'';
+  const multi=galleryImgs.length>1;
+  document.querySelector('.lb-prev').style.display=multi?'flex':'none';
+  document.querySelector('.lb-next').style.display=multi?'flex':'none';
+}
+function galleryNext(e){ if(e)e.stopPropagation(); galleryIdx=(galleryIdx+1)%galleryImgs.length; showGalleryImg(); }
+function galleryPrev(e){ if(e)e.stopPropagation(); galleryIdx=(galleryIdx-1+galleryImgs.length)%galleryImgs.length; showGalleryImg(); }
+function closeGallery(){ document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow=''; }
+function closeGalleryBg(e){ if(e.target.id==='lightbox') closeGallery(); }
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('lightbox').classList.contains('open'))return;
+  if(e.key==='Escape')closeGallery();
+  else if(e.key==='ArrowLeft')galleryNext();
+  else if(e.key==='ArrowRight')galleryPrev();
 });
 
 // ═══════════════════════════════════════════════════════════
