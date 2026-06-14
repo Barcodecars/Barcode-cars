@@ -265,10 +265,17 @@ td{padding:13px 16px;font-size:14px;color:#c8c8c8;white-space:nowrap;vertical-al
 .td-name{display:flex;align-items:center}
 
 /* ─── غلاف الصورة في بطاقة الهاتف ─── */
-.card-cover{position:relative;width:100%;height:190px;overflow:hidden;cursor:pointer;background:#1a1a1a}
-.card-cover img{width:100%;height:100%;object-fit:cover;display:block}
-.card-cover-count{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.72);
-  color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px}
+.card-cover{position:relative;width:100%;height:210px;overflow:hidden;background:#1a1a1a}
+.cc-track{display:flex;width:100%;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cc-track::-webkit-scrollbar{display:none}
+.cc-slide{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:center}
+.cc-slide img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer}
+.cc-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;gap:6px;justify-content:center;pointer-events:none}
+.cc-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.45);transition:.2s}
+.cc-dot.on{background:#f5a800;width:20px;border-radius:4px}
+.card-cover-count{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.72);
+  color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;z-index:2}
 
 /* ─── شريط الترقيم ─── */
 .pager{max-width:1200px;margin:18px auto 0;padding:0 16px;display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -300,7 +307,6 @@ td{padding:13px 16px;font-size:14px;color:#c8c8c8;white-space:nowrap;vertical-al
 .lb-counter{color:#f5a800;font-weight:700;font-size:14px;margin-right:6px}
 @media(max-width:640px){
   .lb-nav{width:44px;height:44px;font-size:24px}
-  .card-cover{height:210px}
 }
 </style>
 </head>
@@ -584,10 +590,16 @@ function render(){
     const pct=MAX_KM?Math.round(c.km/MAX_KM*100):0;
     const kmClr=pct>66?'#ef4444':pct>33?'#f5a800':'#22c55e';
     const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
-    const cover=imgs.length?`<div class="card-cover" onclick="openGallery(${i})">
-        <img src="${esc(imgs[0])}" loading="lazy" alt="">
-        ${imgs.length>1?`<span class="card-cover-count">${imgs.length} صور 📷</span>`:''}
-      </div>`:'';
+    let cover='';
+    if(imgs.length){
+      const slides=imgs.map((u,k)=>`<div class="cc-slide"><img src="${esc(u)}" loading="lazy" alt="" onclick="openGallery(${i},${k})"></div>`).join('');
+      const dots=imgs.length>1?`<div class="cc-dots" id="dots-${i}">${imgs.map((_,k)=>`<span class="cc-dot${k===0?' on':''}"></span>`).join('')}</div>`:'';
+      const badge=imgs.length>1?`<span class="card-cover-count">${imgs.length} صور 📷</span>`:'';
+      cover=`<div class="card-cover">
+        <div class="cc-track" onscroll="ccScroll(${i},this)">${slides}</div>
+        ${badge}${dots}
+      </div>`;
+    }
     return`<div class="car-card">
       ${cover}
       <div class="car-card-header">
@@ -665,13 +677,24 @@ document.getElementById('btnReset').addEventListener('click',()=>{
 //  معرض الصور (Lightbox)
 // ═══════════════════════════════════════════════════════════
 let galleryImgs=[], galleryIdx=0, galleryName='';
-function openGallery(carIndex){
+
+// تحديث النقاط أثناء سحب الصور داخل البطاقة
+function ccScroll(carIndex, track){
+  const dots=document.getElementById('dots-'+carIndex);
+  if(!dots) return;
+  const w=track.clientWidth||1;
+  // RTL: نحسب الإزاحة بالقيمة المطلقة
+  const idx=Math.round(Math.abs(track.scrollLeft)/w);
+  [...dots.children].forEach((d,k)=>d.classList.toggle('on',k===idx));
+}
+
+function openGallery(carIndex, startIdx){
   const data=getFiltered();
   const c=data[carIndex];
   if(!c) return;
   const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
   if(!imgs.length) return;
-  galleryImgs=imgs; galleryIdx=0; galleryName=c.name;
+  galleryImgs=imgs; galleryIdx=startIdx||0; galleryName=c.name;
   showGalleryImg();
   document.getElementById('lightbox').classList.add('open');
   document.body.style.overflow='hidden';
