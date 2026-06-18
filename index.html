@@ -470,11 +470,30 @@ let CARS=[
 ];
 
 const CHEX={
-  "أبيض":"#f0f0f0","أسود":"#1a1a1a","أزرق":"#3b82f6",
-  "سمنتي":"#7a8a99","أسمنتي":"#7a8a99","سلفر":"#c0c0c0",
-  "صحراوي":"#c8922a","بنفسجي":"#a855f7"
+  "أبيض":"#f0f0f0","أسود":"#1a1a1a","أزرق":"#3b82f6","كحلي":"#1e3a5f",
+  "سمنتي":"#7a8a99","أسمنتي":"#7a8a99","رمادي":"#808080","سلفر":"#c0c0c0","فضي":"#c0c0c0",
+  "صحراوي":"#c8922a","بنفسجي":"#a855f7","أحمر":"#dc2626","عنابي":"#7b1d1d",
+  "أخضر":"#16a34a","زيتي":"#556b2f","أصفر":"#eab308","ذهبي":"#d4af37",
+  "برتقالي":"#ea580c","بني":"#78462a","نحاسي":"#b87333","وردي":"#ec4899",
+  "شمباني":"#e8d4a0","بيج":"#d8c9a8","تيتانيوم":"#6b6b6b"
 };
-const CBORDER={"أبيض":"box-shadow:inset 0 0 0 1.5px #666;"};
+const CBORDER={
+  "أبيض":"box-shadow:inset 0 0 0 1.5px #666;",
+  "شمباني":"box-shadow:inset 0 0 0 1.5px #888;",
+  "بيج":"box-shadow:inset 0 0 0 1.5px #888;"
+};
+
+// تطبيع اسم اللون: يوحّد الهمزات (أ إ آ → ا) ويحذف المسافات
+// حتى يعمل اللون سواء كُتب "أحمر" أو "احمر"
+function normColor(s){
+  return String(s||'').trim().replace(/[\u0623\u0625\u0622]/g,'\u0627');
+}
+// بناء خريطة مطبّعة للبحث المرن
+const CHEX_N={}, CBORDER_N={};
+for(const k in CHEX){ CHEX_N[normColor(k)]=CHEX[k]; }
+for(const k in CBORDER){ CBORDER_N[normColor(k)]=CBORDER[k]; }
+function colorHex(c){ return CHEX_N[normColor(c)]||'#555'; }
+function colorBorder(c){ return CBORDER_N[normColor(c)]||''; }
 let MAX_KM=Math.max(...CARS.map(c=>c.km),1);
 
 // Barcode decoration
@@ -580,8 +599,8 @@ function render(){
 
   tbody.innerHTML=pageData.map((c,idx)=>{
     const i=start+idx;
-    const hex=CHEX[c.color]||'#555';
-    const brd=CBORDER[c.color]||'';
+    const hex=colorHex(c.color);
+    const brd=colorBorder(c.color);
     const pct=MAX_KM?Math.round(c.km/MAX_KM*100):0;
     const kmClr=pct>66?'#ef4444':pct>33?'#f5a800':'#22c55e';
     const notes=c.notes?`<span class="notes-tag">${c.notes}</span>`:`<span style="color:#3a3a3a">—</span>`;
@@ -603,8 +622,8 @@ function render(){
   // Mobile cards
   cardList.innerHTML=pageData.map((c,idx)=>{
     const i=start+idx;
-    const hex=CHEX[c.color]||'#555';
-    const brd=CBORDER[c.color]||'';
+    const hex=colorHex(c.color);
+    const brd=colorBorder(c.color);
     const pct=MAX_KM?Math.round(c.km/MAX_KM*100):0;
     const kmClr=pct>66?'#ef4444':pct>33?'#f5a800':'#22c55e';
     const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
