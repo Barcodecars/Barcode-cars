@@ -293,7 +293,9 @@ function renderList(){
   document.getElementById('carCount').textContent=CARS.length;
   const box=document.getElementById('carList');
   if(!CARS.length){ box.innerHTML='<div class="empty">لا توجد سيارات بعد</div>'; return; }
-  box.innerHTML = CARS.map((c,i)=>{
+  // ترتيب أبجدي للعرض فقط، مع الاحتفاظ بالفهرس الأصلي لكل سيارة (مهم للتعديل/الحذف)
+  const ordered = CARS.map((c,i)=>({c,i})).sort((a,b)=>String(a.c.name||'').localeCompare(String(b.c.name||''),'ar'));
+  box.innerHTML = ordered.map(({c,i})=>{
     const imgs=(c.images&&c.images.length)?c.images:(c.image?[c.image]:[]);
     const thumb=imgs.length
       ? `<img src="${esc(imgs[0])}" style="width:54px;height:42px;object-fit:cover;border-radius:6px;border:1px solid #2e2e2e;flex-shrink:0" alt="">`

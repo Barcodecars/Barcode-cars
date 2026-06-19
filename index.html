@@ -32,7 +32,7 @@ header{
   position:sticky;top:0;z-index:200;
 }
 .logo-wrap{display:flex;align-items:center;gap:14px}
-.logo-img{width:64px;height:64px;object-fit:contain}
+.logo-img{width:104px;height:104px;object-fit:contain}
 .logo-text{line-height:1}
 .logo-text .brand{font-size:22px;font-weight:900;color:var(--yellow);letter-spacing:2px;text-transform:uppercase}
 .logo-text .sub{font-size:11px;color:var(--gray);letter-spacing:3px;text-transform:uppercase;margin-top:2px}
@@ -227,7 +227,7 @@ td{padding:13px 16px;font-size:14px;color:#c8c8c8;white-space:nowrap;vertical-al
 /* ─── RESPONSIVE ─── */
 @media(max-width:640px){
   header{padding:0 12px;height:60px}
-  .logo-img{width:44px;height:44px}
+  .logo-img{width:72px;height:72px}
   .logo-text .brand{font-size:15px;letter-spacing:1px}
   .logo-text .sub{font-size:9px;letter-spacing:2px}
   .badge-total{font-size:12px;padding:5px 12px}
@@ -378,7 +378,9 @@ td{padding:13px 16px;font-size:14px;color:#c8c8c8;white-space:nowrap;vertical-al
   <div class="filter-group">
     <span class="filter-label">ترتيب</span>
     <select id="fSort">
-      <option value="">افتراضي</option>
+      <option value="na">الاسم: أ → ي</option>
+      <option value="nd">الاسم: ي → أ</option>
+      <option value="">حسب الإضافة</option>
       <option value="pa">السعر: الأقل أولاً</option>
       <option value="pd">السعر: الأعلى أولاً</option>
       <option value="yd">الأحدث أولاً</option>
@@ -553,6 +555,8 @@ function getFiltered(){
   else if(fs==='ya')d.sort((a,b)=>a.year-b.year);
   else if(fs==='ka')d.sort((a,b)=>a.km-b.km);
   else if(fs==='kd')d.sort((a,b)=>b.km-a.km);
+  else if(fs==='na')d.sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  else if(fs==='nd')d.sort((a,b)=>b.name.localeCompare(a.name,'ar'));
   return d;
 }
 
@@ -710,7 +714,8 @@ function esc(s){ return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&l
 });
 document.getElementById('btnReset').addEventListener('click',()=>{
   ['q'].forEach(id=>document.getElementById(id).value='');
-  ['fYear','fColor','fPrice','fSort'].forEach(id=>document.getElementById(id).value='');
+  ['fYear','fColor','fPrice'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fSort').value='na';
   currentPage=1; render();
 });
 
