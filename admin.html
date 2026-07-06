@@ -203,18 +203,42 @@ async function fetchCars(){
   }
 }
 
-// ─────────── كتابة الملف إلى GitHub ───────────
+// ─────────── جلب أحدث SHA للملف مباشرة من GitHub ───────────
+async function getFreshSHA(){
+  const url = `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${FILE_PATH}?t=${Date.now()}`;
+  const res = await fetch(url, {
+    headers:{ 'Authorization':'Bearer '+CFG.token, 'Accept':'application/vnd.github+json' },
+    cache:'no-store'
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  return data.sha;
+}
+
+// ─────────── كتابة الملف إلى GitHub (مع منع التعارض 409) ───────────
 async function pushCars(commitMsg){
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(CARS,null,2))));
   const url = `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${FILE_PATH}`;
-  const res = await fetch(url, {
-    method:'PUT',
-    headers:{ 'Authorization':'Bearer '+CFG.token, 'Accept':'application/vnd.github+json' },
-    body: JSON.stringify({ message:commitMsg, content:content, sha:SHA })
-  });
-  if(!res.ok){ const t=await res.text(); throw new Error('HTTP '+res.status+' '+t); }
-  const data = await res.json();
-  SHA = data.content.sha; // تحديث المعرّف للنسخة الجديدة
+  // نحاول حتى 3 مرات: نجلب أحدث SHA ثم نحفظ. لو حدث تعارض نعيد بالـSHA الأحدث.
+  let lastErr='';
+  for(let attempt=0; attempt<3; attempt++){
+    try{ SHA = await getFreshSHA(); }catch(e){ /* لو تعذّر الجلب نكمل بالـSHA المتوفر */ }
+    const res = await fetch(url, {
+      method:'PUT',
+      headers:{ 'Authorization':'Bearer '+CFG.token, 'Accept':'application/vnd.github+json' },
+      body: JSON.stringify({ message:commitMsg, content:content, sha:SHA })
+    });
+    if(res.ok){
+      const data = await res.json();
+      SHA = data.content.sha; // تحديث المعرّف للنسخة الجديدة
+      return;
+    }
+    lastErr = 'HTTP '+res.status+' '+await res.text();
+    // 409 = تعارض نسخة: ننتظر قليلاً ونعيد المحاولة بأحدث SHA
+    if(res.status===409){ await new Promise(r=>setTimeout(r,700)); continue; }
+    throw new Error(lastErr); // خطأ آخر: نتوقف
+  }
+  throw new Error(lastErr);
 }
 
 // ─────────── إضافة / تعديل ───────────
@@ -243,7 +267,7 @@ async function submitCar(){
     setForm('ok', editIndex>=0 ? '✓ تم التعديل — سيظهر للزبون خلال دقيقة' : '✓ تمت الإضافة — ستظهر للزبون خلال دقيقة');
     clearForm(); renderList();
   }catch(e){
-    setForm('err','فشل الحفظ: '+e.message);
+    setForm('err','تعذّر الحفظ. تحقق من الإنترنت وحاول مرة أخرى. ('+String(e.message).slice(0,60)+')');
     await fetchCars(); // إعادة المزامنة عند الخطأ
   }
   btn.disabled=false;
