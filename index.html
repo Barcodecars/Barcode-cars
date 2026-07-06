@@ -765,21 +765,37 @@ document.addEventListener('keydown',e=>{
 });
 
 // ═══════════════════════════════════════════════════════════
-//  تحميل بيانات السيارات من ملف cars.json
-//  لتعديل السيارات: عدّل ملف cars.json فقط — لا تلمس هذا الملف
+//  تحميل بيانات السيارات
+//  تقرأ مباشرةً من GitHub (raw) لتظهر التعديلات فوراً دون انتظار النشر،
+//  ومع فشل ذلك ترجع لملف cars.json المنشور كاحتياط.
 // ═══════════════════════════════════════════════════════════
+const GH_OWNER='Barcodecars';
+const GH_REPO='Barcode-cars';
+const GH_BRANCH='main';
+
 async function loadCars(){
-  try{
-    const res=await fetch('cars.json?t='+Date.now());
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const cars=await res.json();
-    if(Array.isArray(cars) && cars.length){
-      CARS=cars;
-      MAX_KM=Math.max(...CARS.map(c=>c.km||0),1);
-    }
-  }catch(e){
-    console.error('تعذّر تحميل cars.json — سيتم عرض النسخة الاحتياطية المدمجة:',e);
+  const t=Date.now();
+  const sources=[
+    // 1) القراءة المباشرة من GitHub raw — فورية، لا تنتظر نشر Pages
+    `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/cars.json?t=${t}`,
+    // 2) احتياط: الملف المنشور على الموقع
+    `cars.json?t=${t}`
+  ];
+  let loaded=false;
+  for(const url of sources){
+    try{
+      const res=await fetch(url,{cache:'no-store'});
+      if(!res.ok) continue;
+      const cars=await res.json();
+      if(Array.isArray(cars) && cars.length){
+        CARS=cars;
+        MAX_KM=Math.max(...CARS.map(c=>c.km||0),1);
+        loaded=true;
+        break;
+      }
+    }catch(e){ /* جرّب المصدر التالي */ }
   }
+  if(!loaded){ console.error('تعذّر تحميل بيانات السيارات — عرض النسخة الاحتياطية المدمجة'); }
   buildFilters();
   render();
 }
